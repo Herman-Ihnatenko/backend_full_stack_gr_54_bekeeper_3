@@ -10,6 +10,8 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
+import static javax.crypto.Cipher.SECRET_KEY;
+
 @Component
 public class JwtService {
 
@@ -22,6 +24,7 @@ public class JwtService {
 
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
+                .claim("role", userDetails.getAuthorities())
                 .setIssuedAt(now)
                 .setExpiration(expiry)
                 .signWith(secretKey)
@@ -29,11 +32,11 @@ public class JwtService {
     }
 
     private Claims parseClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(secretKey)
+        return Jwts.parserBuilder()
+                .setSigningKey(secretKey)
                 .build()
-                .parseSignedClaims(token)
-                .getPayload();
+                .parseClaimsJws(token)
+                .getBody();
     }
 
     public String extractUsername(String token) {
@@ -48,6 +51,10 @@ public class JwtService {
     public boolean isTokenValid(String token, UserDetails userDetails) {
         String username = extractUsername(token);
         return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
+    }
+
+    public String extractRole(String token) {
+        return parseClaims(token).get("role", String.class);
     }
 
 }
